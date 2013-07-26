@@ -96,7 +96,6 @@ class AndroidAppUpdater extends AbstractAppUpdater
 
                 // add the latest release notes if available
                 if (isset($parsed_json['notes'])) {
-                    $newAppVersion[self::RETURN_V2_NOTES] = Helper::nl2br_skip_html($parsed_json['notes']);
                 }
 
                 $result[] = $newAppVersion;

@@ -26,12 +26,16 @@
 
 date_default_timezone_set('UTC');
 
+require('json.inc');
 require('plist.inc');
 require_once('config.inc');
 require_once('helper.php');
 require_once('logger.php');
 require_once('router.php');
 require_once('devicedetector.php');
+require_once('Device.php');
+require_once('Application.php');
+require_once('Build.php');
 
 class AppUpdater
 {
@@ -112,6 +116,7 @@ class AppUpdater
     const INDEX_IMAGE           = 'image';
     const INDEX_STATS           = 'stats';
     const INDEX_PLATFORM        = 'platform';
+    const INDEX_ALL_VERSIONS    = 'allVersions';
 
     // define filetypes
     const FILE_IOS_PLIST        = '.plist';
@@ -210,21 +215,15 @@ class AppUpdater
     protected function addStats($bundleidentifier, $format)
     {
         // did we get any user data?
-        $osname = Router::arg(self::PARAM_2_OS, 'iOS');
-
-        if ($osname == "Android") {
-		    $udid = Router::arg_match(self::PARAM_2_UDID, '/^[0-9a-f]{16}$/i');
-	    }
-	    else {
-		    $udid = Router::arg_match(self::PARAM_2_UDID, '/^[0-9a-f]{40}$/i');
-	    }
+        $udid = Router::arg_match(self::PARAM_2_UDID, '/^[0-9a-f]{40}$/i');
 
         if (!$udid || !is_dir($this->appDirectory.'stats/')) {
             return;
         }
-        
+
         $appversion     = Router::arg_variants(array(self::PARAM_2_APP_VERSION, self::PARAM_1_APP_VERSION));
         $osversion      = Router::arg_variants(array(self::PARAM_2_OS_VERSION, self::PARAM_1_OS_VERSION));
+        $osname         = Router::arg(self::PARAM_2_OS, 'iOS');
         $device         = Router::arg_variants(array(self::PARAM_2_DEVICE, self::PARAM_1_DEVICE));
         $language       = Router::arg(self::PARAM_2_LANGUAGE, '');
         $firststartdate = Router::arg(self::PARAM_2_FIRST_START, '');
@@ -296,6 +295,7 @@ class AppUpdater
     
     protected function getApplicationVersions($bundleidentifier, $platform = null)
     {
+	
         $files = array();
         
         $language = Router::arg(self::PARAM_2_LANGUAGE);
@@ -408,7 +408,6 @@ class AppUpdater
                 $files[self::VERSIONS_COMMON_DATA][self::FILE_COMMON_ICON] = $icon;
             }
         }
-        
         return $files;
     }
     
@@ -462,11 +461,16 @@ class AppUpdater
         exit();
     }
     
-    protected function findPublicVersion($files)
+    protected function findPublicVersion($files, $appVersion = null)
     {
         $publicVersion = array();
         
         foreach ($files as $version => $fileSet) {
+					
+						if ($appVersion != null && $appVersion != $version) {
+							continue;
+						}
+
             if (isset($fileSet[self::FILE_ANDROID_APK])) {
                 $publicVersion = $fileSet;
                 break;
@@ -484,7 +488,7 @@ class AppUpdater
         return $publicVersion;
     }
     
-    public function show($appBundleIdentifier)
+    public function show($appBundleIdentifier, $appVersion = null)
     {
         // first get all the subdirectories, which do not have a file named "private" present
         if ($handle = opendir($this->appDirectory)) {
@@ -517,7 +521,7 @@ class AppUpdater
                     continue;
                 }
                 
-                $current = $this->findPublicVersion($files[self::VERSIONS_SPECIFIC_DATA]);
+                $current = $this->findPublicVersion($files[self::VERSIONS_SPECIFIC_DATA], $appVersion);
                 $ipa      = isset($current[self::FILE_IOS_IPA]) ? $current[self::FILE_IOS_IPA] : null;
                 $plist    = isset($current[self::FILE_IOS_PLIST]) ? $current[self::FILE_IOS_PLIST] : null;
                 $apk      = isset($current[self::FILE_ANDROID_APK]) ? $current[self::FILE_ANDROID_APK] : null;
@@ -548,6 +552,8 @@ class AppUpdater
                 $newApp[self::INDEX_IMAGE] = substr($image, strpos($image, $file));
                 $newApp[self::INDEX_NOTES] = $note ? Helper::nl2br_skip_html(file_get_contents($note)) : '';
                 $newApp[self::INDEX_STATS] = array();
+                $newApp[self::INDEX_ALL_VERSIONS] = $files[self::VERSIONS_SPECIFIC_DATA];
+
 
                 if ($ipa) {
                     // iOS application
@@ -579,13 +585,10 @@ class AppUpdater
                     $newApp[self::INDEX_APP]        = $parsed_json['title'];
                     $newApp[self::INDEX_SUBTITLE]   = $parsed_json['versionName'];
                     $newApp[self::INDEX_VERSION]    = $parsed_json['versionCode'];
+                    $newApp[self::INDEX_NOTES]      = $parsed_json['notes'];
                     $newApp[self::INDEX_DATE]       = filectime($apk);
                     $newApp[self::INDEX_APPSIZE]    = filesize($apk);
                     $newApp[self::INDEX_PLATFORM]   = self::APP_PLATFORM_ANDROID;
-
-                    if (!isset($newApp[self::INDEX_NOTES])) {
-                        $newApp[self::INDEX_NOTES]      = isset($parsed_json['notes']) ? $parsed_json['notes'] : '';
-                    }
                 }
                 
                 // now get the current user statistics

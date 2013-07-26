@@ -15,7 +15,7 @@ class Router
 
     static protected $instance;
     
-    // there can only be one
+    // there can only be one --- WHY?
     static public function get($options = null) {
         
         if (!self::$instance) {

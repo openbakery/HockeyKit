@@ -22,8 +22,11 @@ class iOSAppUpdater extends AbstractAppUpdater
     }
     
     protected function download($arguments) {
+	
+
         $bundleidentifier = $arguments[self::PARAM_2_IDENTIFIER];
         $format           = $arguments[self::PARAM_2_FORMAT];
+				$version          = $arguments['version'];
         
         $files = $this->getApplicationVersions($bundleidentifier, self::PLATFORM_IOS);
         if (count($files) == 0) {
@@ -31,8 +34,13 @@ class iOSAppUpdater extends AbstractAppUpdater
             return Helper::sendJSONAndExit(self::E_NO_VERSIONS_FOUND);
         }
 
-        $dir = array_shift(array_keys($files[self::VERSIONS_SPECIFIC_DATA]));
-        $current = $files[self::VERSIONS_SPECIFIC_DATA][$dir];
+				if ($version) {
+	        $current = $files[self::VERSIONS_SPECIFIC_DATA][$version];
+				} else {
+	        $dir = array_shift(array_keys($files[self::VERSIONS_SPECIFIC_DATA]));
+	        $current = $files[self::VERSIONS_SPECIFIC_DATA][$dir];
+				}
+
         
         if ($format == self::PARAM_2_FORMAT_VALUE_PLIST) // || $type == self::PARAM_1_TYPE_VALUE_APP)
         {
@@ -228,6 +236,7 @@ XML;
     public function deliver($bundleidentifier, $api, $format)
     {
         $files = $this->getApplicationVersions($bundleidentifier, self::PLATFORM_IOS);
+
         if (count($files) == 0) {
             Logger::log("no versions found: $bundleidentifier $api $type");
             return Helper::sendJSONAndExit(self::E_NO_VERSIONS_FOUND);
