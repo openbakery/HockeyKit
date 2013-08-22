@@ -86,7 +86,7 @@
 							  </button>
 							  <ul class="dropdown-menu">
 								{% for build in application.builds %}
-									<li><a href="{{ application.builds[0].downloadURL }}">Version <b>{{ build.version }}</b></a></li>
+									<li><a href="{{ build.downloadURL }}">Version <b>{{ build.version }}</b></a></li>
 								{% endfor %}
 						  	</ul>
 							</div>

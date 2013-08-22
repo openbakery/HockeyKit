@@ -50,7 +50,7 @@ class Application {
 					$downloadURL = $application->baseURL . 'api/2/apps/' . $application->directory . '?format=plist&version=' . $build->version;
 					$build->downloadURL = "itms-services://?action=download-manifest&amp;url=" . urlencode($downloadURL);
 				} else {
-					$build->downloadURL = $application->baseURL . $application->path;
+					$build->downloadURL = $application->baseURL . $application->directory . '/' . $build->version . '/' . basename($build->ipa);
 				}
 				$application->builds[] = $build;
 			}
